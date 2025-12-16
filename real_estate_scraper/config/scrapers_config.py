@@ -114,38 +114,35 @@ LISTING_CONFIG = {
     },
 
     # CSS Selectors - UPDATED for MagicBricks.com actual HTML structure
-    # More specific selectors based on actual page inspection
     "selectors": {
-        # Main property card container - specific to MagicBricks structure
+        # Main property card container
         "listing_card": "div.mb-srp__list div.mb-srp__card",
 
-        # Property title/address - specific h2 element
+        # Property title/address
         "address": "h2.mb-srp__card--title",
 
-        # Price - specific price amount element
+        # Price
         "price": "div.mb-srp__card__price--amount",
 
-        # BHK/Bedrooms - using data-summary attribute (more reliable)
-        "bedrooms": "div[data-summary='super-area'] .mb-srp__card__summary--value",
+        # BHK - extract from title (will parse "3" from "3 BHK Flat...")
+        "bedrooms": "h2.mb-srp__card--title",
 
-        # Square footage - using data-summary attribute
+        # All other fields use data-summary attributes
         "sqft": "div[data-summary='super-area'] .mb-srp__card__summary--value",
-
-        # Bathrooms - using data-summary attribute (OPTIONAL - won't crash if missing)
         "bathrooms": "div[data-summary='bathroom'] .mb-srp__card__summary--value",
+        "status": "div[data-summary='status'] .mb-srp__card__summary--value",
+        "transaction": "div[data-summary='transaction'] .mb-srp__card__summary--value",
+        "furnishing": "div[data-summary='furnishing'] .mb-srp__card__summary--value",
+        "society": "div[data-summary='society'] .mb-srp__card__summary--value",
+        "parking": "div[data-summary='parking'] .mb-srp__card__summary--value",
 
-        # Listing date - keep flexible fallback selectors
-        "listing_date": "div.mb-srp__card__posted--date, span.mb-srp__card__ads--posted, [class*='date'], [class*='posted'], span[class*='time'], time, div.posted, span.postedOn",
-
-        # Agent/builder info - keep flexible fallback selectors
-        "agent_contact": "div.mb-srp__card__ads--phone, span.mb-srp__card__builder, [class*='builder-name'], [class*='agent'], div.builder-name, span.agent-name",
-
-        # Next page button - simplified to most common patterns
+        "listing_date": "div.mb-srp__card__posted--date, span.mb-srp__card__ads--posted",
+        "agent_contact": "div.mb-srp__card__ads--phone, span.mb-srp__card__builder",
         "next_button": "a[rel='next'], button[aria-label='Next']",
 
-        # Alternative selectors (fallback for Housing.com, 99acres)
-        "alt_listing_card": "div.m-srp-card, div[class*='m-srp-card'], article[class*='property-card'], div.srpWrap, section.srpCard, div[data-testid='builder-card']",
-        "alt_price": "span.mb-srp__card__price--amount, div[data-price], span[class*='price'], td.price span, div.fontPrice, span.srpPriceValue",
+        # Fallback selectors
+        "alt_listing_card": "div.srpWrap, section.srpCard, div[data-testid='builder-card']",
+        "alt_price": "div.fontPrice, span.srpPriceValue",
     },
 
     # Pagination

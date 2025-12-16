@@ -380,18 +380,50 @@ class ListingScraper(BaseScraper):
         data['address'] = address
         data['price'] = price
 
-        # Extract OPTIONAL fields - don't fail if missing
-        bedrooms = await self._safe_extract_text(card, selectors.get('bedrooms', ''))
-        if bedrooms:
-            data['bedrooms'] = bedrooms
+        # Extract BHK from title (e.g., "3 BHK Flat..." → 3)
+        bhk_match = re.search(r'(\d+)\s*BHK', address, re.IGNORECASE)
+        if bhk_match:
+            data['bedrooms'] = int(bhk_match.group(1))
 
+        # Extract sqft (convert from sqyrd if needed: 1 sqyrd = 9 sqft)
+        sqft_text = await self._safe_extract_text(card, selectors.get('sqft', ''))
+        if sqft_text:
+            # Extract number from text like "307 sqyrd" or "2763 sqft"
+            sqft_match = re.search(r'([\d,]+)', sqft_text.replace(',', ''))
+            if sqft_match:
+                sqft_value = float(sqft_match.group(1))
+                # Convert sqyrd to sqft if needed
+                if 'sqyrd' in sqft_text.lower() or 'sq yrd' in sqft_text.lower():
+                    sqft_value = sqft_value * 9
+                data['sqft'] = int(sqft_value)
+
+        # Extract bathrooms
         bathrooms = await self._safe_extract_text(card, selectors.get('bathrooms', ''))
         if bathrooms:
-            data['bathrooms'] = bathrooms
+            bath_match = re.search(r'(\d+)', bathrooms)
+            if bath_match:
+                data['bathrooms'] = int(bath_match.group(1))
 
-        sqft = await self._safe_extract_text(card, selectors.get('sqft', ''))
-        if sqft:
-            data['sqft'] = sqft
+        # Extract new fields (all optional)
+        status = await self._safe_extract_text(card, selectors.get('status', ''))
+        if status:
+            data['status'] = status
+
+        transaction = await self._safe_extract_text(card, selectors.get('transaction', ''))
+        if transaction:
+            data['transaction'] = transaction
+
+        furnishing = await self._safe_extract_text(card, selectors.get('furnishing', ''))
+        if furnishing:
+            data['furnishing'] = furnishing
+
+        society = await self._safe_extract_text(card, selectors.get('society', ''))
+        if society:
+            data['society'] = society
+
+        parking = await self._safe_extract_text(card, selectors.get('parking', ''))
+        if parking:
+            data['parking'] = parking
 
         listing_date = await self._safe_extract_text(card, selectors.get('listing_date', ''))
         if listing_date:
