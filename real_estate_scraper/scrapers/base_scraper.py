@@ -367,7 +367,7 @@ class BaseScraper(ABC):
             >>> result = await scraper.run()
             >>> print(f"Extracted {result['total_records']} records")
         """
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now()
         logger.info(f"Starting {self.name} scraper...")
 
         try:
@@ -383,7 +383,7 @@ class BaseScraper(ABC):
 
             # Build result
             result = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "scraper_name": self.name,
                 "scraper_type": self.config.get('name', 'unknown'),
                 "total_records": len(self.records_extracted),
@@ -391,7 +391,7 @@ class BaseScraper(ABC):
                 "failed_records": failed,
                 "records": self.records_extracted,
                 "errors": self.errors,
-                "execution_time_seconds": (datetime.utcnow() - self.start_time).total_seconds(),
+                "execution_time_seconds": (datetime.now() - self.start_time).total_seconds(),
                 "proxy_stats": self.proxy_rotator.get_stats(),
             }
 
@@ -407,7 +407,7 @@ class BaseScraper(ABC):
             self.errors.append(str(e))
 
             return {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "scraper_name": self.name,
                 "scraper_type": self.config.get('name', 'unknown'),
                 "total_records": 0,
@@ -415,7 +415,7 @@ class BaseScraper(ABC):
                 "failed_records": 0,
                 "records": [],
                 "errors": self.errors,
-                "execution_time_seconds": (datetime.utcnow() - self.start_time).total_seconds() if self.start_time else 0,
+                "execution_time_seconds": (datetime.now() - self.start_time).total_seconds() if self.start_time else 0,
             }
 
         finally:

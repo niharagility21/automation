@@ -55,13 +55,13 @@ class RealEstateScraper:
         logger.info("STARTING AUCTION SCRAPER")
         logger.info("=" * 80)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now()
 
         try:
             scraper = AuctionScraper(config=AUCTION_CONFIG)
             result = await scraper.run()
 
-            duration = (datetime.utcnow() - start_time).total_seconds()
+            duration = (datetime.now() - start_time).total_seconds()
 
             log_extraction_success(
                 logger=logger,
@@ -73,7 +73,7 @@ class RealEstateScraper:
             return result
 
         except Exception as e:
-            duration = (datetime.utcnow() - start_time).total_seconds()
+            duration = (datetime.now() - start_time).total_seconds()
 
             log_extraction_error(
                 logger=logger,
@@ -82,7 +82,7 @@ class RealEstateScraper:
             )
 
             return {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "scraper_name": "AuctionScraper",
                 "scraper_type": "auction",
                 "total_records": 0,
@@ -104,7 +104,7 @@ class RealEstateScraper:
         logger.info("STARTING LISTING SCRAPER")
         logger.info("=" * 80)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now()
 
         try:
             scraper = ListingScraper(config=LISTING_CONFIG)
@@ -114,7 +114,7 @@ class RealEstateScraper:
             if hasattr(scraper, 'market_stats'):
                 result['market_stats'] = scraper.market_stats
 
-            duration = (datetime.utcnow() - start_time).total_seconds()
+            duration = (datetime.now() - start_time).total_seconds()
 
             log_extraction_success(
                 logger=logger,
@@ -126,7 +126,7 @@ class RealEstateScraper:
             return result
 
         except Exception as e:
-            duration = (datetime.utcnow() - start_time).total_seconds()
+            duration = (datetime.now() - start_time).total_seconds()
 
             log_extraction_error(
                 logger=logger,
@@ -135,7 +135,7 @@ class RealEstateScraper:
             )
 
             return {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "scraper_name": "ListingScraper",
                 "scraper_type": "listing",
                 "total_records": 0,
@@ -163,7 +163,7 @@ class RealEstateScraper:
 
         # Combine results
         combined_result = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "scrapers_run": ["auction", "listing"],
             "auction_scraper": auction_result,
             "listing_scraper": listing_result,
@@ -199,7 +199,7 @@ class RealEstateScraper:
             Path to exported JSON file
         """
         # Generate filename with timestamp
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"output_{scraper_type}_{timestamp}.json"
         output_path = OUTPUT_DIR / filename
 

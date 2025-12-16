@@ -231,10 +231,16 @@ class ListingScraper(BaseScraper):
 
     async def _extract_listings_from_page(self) -> List[Dict[str, Any]]:
         """
-        Extract all listing data from current page.
+        Extract listing data from current page with safety limits.
 
         Returns:
             List of listing dicts from current page
+
+        Safety features:
+        - Limits extraction to 50 properties max per page
+        - Checks if browser context is alive before each extraction
+        - Gracefully handles extraction failures
+        - Skips cards with missing critical data
         """
         listings = []
         selectors = self.config['selectors']
@@ -248,25 +254,90 @@ class ListingScraper(BaseScraper):
             if alt_selector:
                 listing_cards = await self.page.query_selector_all(alt_selector)
 
-        logger.info(f"Found {len(listing_cards)} listing cards on page")
+        total_cards = len(listing_cards)
+        logger.info(f"Found {total_cards} listing cards on page")
 
-        # Extract data from each card
-        for idx, card in enumerate(listing_cards):
+        # Limit extraction to prevent browser crashes
+        MAX_CARDS_PER_PAGE = 50
+        cards_to_extract = min(total_cards, MAX_CARDS_PER_PAGE)
+
+        if total_cards > MAX_CARDS_PER_PAGE:
+            logger.info(f"Limiting extraction to {MAX_CARDS_PER_PAGE} cards (found {total_cards})")
+
+        # Extract data from each card (up to limit)
+        for idx in range(cards_to_extract):
+            # Check if browser context is still alive
             try:
+                if self.context.is_closed():
+                    logger.warning(
+                        f"Browser context closed at card {idx}/{cards_to_extract}. "
+                        f"Extracted {len(listings)} listings before closure."
+                    )
+                    break
+            except AttributeError:
+                # context might not exist, skip check
+                pass
+
+            try:
+                card = listing_cards[idx]
                 listing_data = await self._extract_listing_from_card(card, idx)
+
                 if listing_data and listing_data.get('address'):
                     listings.append(listing_data)
                 else:
                     logger.warning(f"Skipping card {idx}: missing address")
 
             except Exception as e:
-                logger.warning(f"Failed to extract card {idx}: {e}")
-                listings.append({
-                    "error": str(e),
-                    "card_index": idx,
-                })
+                # Log but continue - don't let one bad card stop entire scrape
+                error_msg = str(e)
+                if "Target page, context or browser has been closed" in error_msg:
+                    logger.error(
+                        f"Browser closed at card {idx}/{cards_to_extract}. "
+                        f"Returning {len(listings)} extracted listings."
+                    )
+                    break
+                else:
+                    logger.warning(f"Failed to extract card {idx}: {e}")
+                    # Don't add error cards to results - just skip them
+                    continue
 
+        logger.info(f"Successfully extracted {len(listings)} listings from {cards_to_extract} cards")
         return listings
+
+    async def _safe_extract_text(
+        self,
+        card,
+        selector: str,
+        alt_selector: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Safely extract text from element - returns None if not found.
+
+        Args:
+            card: Playwright element handle
+            selector: CSS selector to try
+            alt_selector: Alternative CSS selector (optional)
+
+        Returns:
+            Extracted text or None
+        """
+        try:
+            elem = await card.query_selector(selector)
+            if elem:
+                text = await elem.text_content()
+                return text.strip() if text else None
+
+            # Try alternative selector if provided
+            if alt_selector:
+                elem = await card.query_selector(alt_selector)
+                if elem:
+                    text = await elem.text_content()
+                    return text.strip() if text else None
+
+        except Exception as e:
+            logger.debug(f"Failed to extract with selector '{selector}': {e}")
+
+        return None
 
     async def _extract_listing_from_card(
         self,
@@ -275,6 +346,8 @@ class ListingScraper(BaseScraper):
     ) -> Dict[str, Any]:
         """
         Extract listing data from a single listing card.
+
+        Only address and price are required - all other fields are optional.
 
         Args:
             card: Playwright element handle for listing card
@@ -286,46 +359,47 @@ class ListingScraper(BaseScraper):
         selectors = self.config['selectors']
         data = {
             "card_index": card_index,
-            "scraped_at": datetime.utcnow().isoformat(),
+            "scraped_at": datetime.now().isoformat(),  # Fixed deprecation warning
         }
 
-        # Extract address
-        address_elem = await card.query_selector(selectors['address'])
-        if address_elem:
-            data['address'] = await address_elem.text_content()
+        # Extract REQUIRED fields: address and price
+        address = await self._safe_extract_text(card, selectors['address'])
+        if not address:
+            logger.debug(f"Card {card_index}: No address found, skipping")
+            return {}
 
-        # Extract price
-        price_elem = await card.query_selector(selectors['price'])
-        if not price_elem:
-            price_elem = await card.query_selector(selectors.get('alt_price', ''))
+        price = await self._safe_extract_text(
+            card,
+            selectors['price'],
+            selectors.get('alt_price')
+        )
+        if not price:
+            logger.debug(f"Card {card_index}: No price found, skipping")
+            return {}
 
-        if price_elem:
-            data['price'] = await price_elem.text_content()
+        data['address'] = address
+        data['price'] = price
 
-        # Extract bedrooms
-        bed_elem = await card.query_selector(selectors['bedrooms'])
-        if bed_elem:
-            data['bedrooms'] = await bed_elem.text_content()
+        # Extract OPTIONAL fields - don't fail if missing
+        bedrooms = await self._safe_extract_text(card, selectors.get('bedrooms', ''))
+        if bedrooms:
+            data['bedrooms'] = bedrooms
 
-        # Extract bathrooms
-        bath_elem = await card.query_selector(selectors['bathrooms'])
-        if bath_elem:
-            data['bathrooms'] = await bath_elem.text_content()
+        bathrooms = await self._safe_extract_text(card, selectors.get('bathrooms', ''))
+        if bathrooms:
+            data['bathrooms'] = bathrooms
 
-        # Extract square footage
-        sqft_elem = await card.query_selector(selectors['sqft'])
-        if sqft_elem:
-            data['sqft'] = await sqft_elem.text_content()
+        sqft = await self._safe_extract_text(card, selectors.get('sqft', ''))
+        if sqft:
+            data['sqft'] = sqft
 
-        # Extract listing date
-        date_elem = await card.query_selector(selectors['listing_date'])
-        if date_elem:
-            data['listing_date'] = await date_elem.text_content()
+        listing_date = await self._safe_extract_text(card, selectors.get('listing_date', ''))
+        if listing_date:
+            data['listing_date'] = listing_date
 
-        # Extract agent info
-        agent_elem = await card.query_selector(selectors['agent_contact'])
-        if agent_elem:
-            data['agent_contact'] = await agent_elem.text_content()
+        agent_contact = await self._safe_extract_text(card, selectors.get('agent_contact', ''))
+        if agent_contact:
+            data['agent_contact'] = agent_contact
 
         # Try to get listing URL (link from card)
         try:
@@ -347,7 +421,7 @@ class ListingScraper(BaseScraper):
         logger.debug(
             f"Extracted listing {card_index}: "
             f"{cleaned_data.get('address', 'N/A')[:50]}, "
-            f"${cleaned_data.get('price', 'N/A')}"
+            f"{cleaned_data.get('price', 'N/A')}"
         )
 
         return cleaned_data

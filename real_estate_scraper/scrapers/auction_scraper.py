@@ -157,7 +157,7 @@ class AuctionScraper(BaseScraper):
         selectors = self.config['selectors']
         data = {
             "card_index": card_index,
-            "scraped_at": datetime.utcnow().isoformat(),
+            "scraped_at": datetime.now().isoformat(),
         }
 
         # Extract address
@@ -224,7 +224,7 @@ class AuctionScraper(BaseScraper):
             logger.info(f"Downloading PDF from {pdf_url}")
 
             # Generate unique filename
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             pdf_filename = f"auction_{card_index}_{timestamp}.pdf"
             pdf_path = PDF_DOWNLOAD_DIR / pdf_filename
 

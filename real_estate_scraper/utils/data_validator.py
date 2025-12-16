@@ -374,7 +374,7 @@ class DataValidator:
                 cleaned[field] = value
 
         # Add metadata
-        cleaned['_cleaned_at'] = datetime.utcnow().isoformat()
+        cleaned['_cleaned_at'] = datetime.now().isoformat()
 
         return cleaned
 

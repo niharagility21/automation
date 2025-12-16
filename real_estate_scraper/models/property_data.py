@@ -157,7 +157,7 @@ class ScraperResult(BaseModel):
     model_config = ConfigDict(validate_assignment=True)
 
     timestamp: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(),
+        default_factory=lambda: datetime.now().isoformat(),
         description="Timestamp of scraper run"
     )
     scraper_name: str = Field(
@@ -245,7 +245,7 @@ class ComparableAnalysis(BaseModel):
         ge=0
     )
     analysis_date: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(),
+        default_factory=lambda: datetime.now().isoformat(),
         description="Date of analysis"
     )
 
@@ -284,6 +284,6 @@ class PDFExtractionResult(BaseModel):
         description="Error message if extraction failed"
     )
     extracted_at: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(),
+        default_factory=lambda: datetime.now().isoformat(),
         description="Timestamp of extraction"
     )
