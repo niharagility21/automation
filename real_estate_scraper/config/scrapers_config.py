@@ -6,122 +6,217 @@ for each target website. Modify these when targeting new sites.
 """
 
 # ===========================
-# AUCTION SITE CONFIGURATION
+# 99ACRES.COM CONFIGURATION (INDIA)
 # ===========================
+# 99acres.com is India's largest real estate portal - works great from India
+# URL: https://www.99acres.com/property-for-sale-flats-apartments-in-mumbai
+#
+# HOW TO UPDATE SELECTORS:
+# 1. Open the URL in your browser
+# 2. Right-click on a property card → Inspect
+# 3. Find the container div class (usually starts with 'srp_tuple' or 'tupleNew')
+# 4. Update the selectors below with the actual class names
 
 AUCTION_CONFIG = {
     "name": "auction_scraper",
-    "url": "https://www.auction.com/lp/foreclosures/",  # Public auction site for demo
-    "description": "Scrapes real estate auction listings with appraisal PDFs",
+    "url": "https://www.99acres.com/property-for-sale-flats-apartments-in-mumbai",
+    "description": "Scrapes real estate listings from 99acres.com (India's largest property portal)",
 
-    # CSS Selectors (customize based on target site structure)
+    # CSS Selectors for 99acres.com
     "selectors": {
-        "property_card": "div.property-card, div[class*='listing'], article[class*='property']",
-        "address": ".address, .property-address, [class*='address']",
-        "price": ".price, .estimated-value, [class*='price']",
-        "auction_date": ".auction-date, [class*='auction-date'], time",
-        "pdf_link": "a[href$='.pdf'], a[class*='appraisal'], a[class*='document']",
-        "next_button": "a.next, button.next, a[rel='next'], [aria-label='Next']",
+        # Main property card container
+        "property_card": "div[id^='srp_tuple'], div.srpTuple, div.tupleNew, div.tuple_srp_new, section[class*='srpCard']",
 
-        # Alternative selectors (fallback)
-        "alt_property_card": "li[class*='property'], div[data-testid*='property']",
-        "alt_price": "span[class*='price'], div[class*='value']",
+        # Property address/location (project name + area)
+        "address": "div.projectName, h2.projectName a, div.tuple_area, span.projectName, div.caption_location, span.ellipsis",
+
+        # Price (in Crores/Lakhs)
+        "price": "div.price, span.price, div.srpPrice, span.amount, td.price, div.fontPrice, span.srpPriceValue",
+
+        # BHK configuration (1BHK, 2BHK, 3BHK, 4BHK - Indian format)
+        "bedrooms": "div.BHK, span.BHK, div.tupleDetail, span.bedrooms, div.bed_config, span.caption_srp_bd_bath",
+
+        # Square footage (Super built-up area)
+        "sqft": "div.area, span.buArea, div.srpSize, span.sqft, div.superBuiltupArea, td[title*='Built']",
+
+        # Posted date / listing date
+        "auction_date": "div.posted, span.postedOn, div.datePasted, time, span.listing_date, div.posted_time",
+
+        # Brochure/PDF download link (if available)
+        "pdf_link": "a[href$='.pdf'], a[class*='brochure'], a[class*='document'], a[title*='Download'], a.downloadBrochure",
+
+        # Next page button (99acres uses infinite scroll mostly)
+        "next_button": "a.next, button.next, a[rel='next'], div.pagination a.next, button[aria-label='Next']",
+
+        # Alternative selectors (fallback if main ones don't work)
+        "alt_property_card": "div.srpWrap, div.clearfix.srpWrap, section.srpCard, article[class*='property']",
+        "alt_price": "span.srpPriceValue, div.priceWrap, span.fontPrice, td.price span",
+        "alt_bedrooms": "span.caption_srp_bd_bath, div.bed_config, td.configTd",
     },
 
-    # Pagination strategy: "button_click", "url_param", "infinite_scroll"
+    # Pagination strategy
     "pagination": {
-        "type": "button_click",
-        "max_pages": 5,  # Limit for demo purposes
-        "url_param_name": "page",  # If using url_param type
+        "type": "infinite_scroll",  # 99acres primarily uses infinite scroll
+        "max_pages": 5,  # Number of scroll attempts
+        "url_param_name": "page",  # Fallback if URL pagination is used
     },
 
     # Wait conditions
     "wait_for": {
-        "selector": "div.property-card, div[class*='listing']",
+        "selector": "div[id^='srp_tuple'], div.srpTuple, section.srpCard",
         "timeout": 20000,  # milliseconds
     },
 
-    # Data extraction patterns
+    # Data extraction patterns (Indian Rupees: ₹)
     "patterns": {
-        "price_regex": r"\$?([\d,]+\.?\d*)",
+        # Indian price formats: ₹1.2 Cr, ₹45 Lac, ₹45 Lakh, ₹1.5 L
+        "price_regex": r"₹\s?([\d,\.]+)\s*(?:Cr|Crore|Lac|Lakh|L|K)?",
+        "bhk_regex": r"(\d+)\s*BHK",  # 2 BHK, 3 BHK, etc.
+        "sqft_regex": r"([\d,]+)\s*(?:sq\.?\s*ft|sqft|Sq-ft|Sq\.Ft\.)",
         "date_format": "%Y-%m-%d",
     },
 }
 
 # ===========================
-# LISTING SITE CONFIGURATION
+# MAGICBRICKS.COM CONFIGURATION (INDIA)
 # ===========================
+# MagicBricks is India's 2nd largest real estate portal - works from India
+# URL: https://www.magicbricks.com/property-for-sale/residential-real-estate?proptype=Multistorey-Apartment,Builder-Floor-Apartment,Penthouse,Studio-Apartment,Residential-House,Villa&cityName=Mumbai
+#
+# HOW TO UPDATE SELECTORS:
+# 1. Open the URL in your browser
+# 2. Right-click on a property card → Inspect
+# 3. Find the container div class (usually 'mb-srp__card' or similar)
+# 4. Update the selectors below with the actual class names
 
 LISTING_CONFIG = {
     "name": "listing_scraper",
-    "url": "https://www.realtor.com/realestateandhomes-search/New-York_NY",  # Public listing site
-    "description": "Scrapes real estate listing data for comparable analysis",
+    "url": "https://www.magicbricks.com/property-for-sale/residential-real-estate?proptype=Multistorey-Apartment,Builder-Floor-Apartment,Penthouse,Studio-Apartment,Residential-House,Villa&cityName=Mumbai",
+    "description": "Scrapes real estate listing data from MagicBricks.com for comparable analysis",
 
-    # Search parameters
+    # Search parameters for MagicBricks
     "search_params": {
-        "zip": "10001",  # NYC zip code for demo
-        "radius": 5,  # miles
-        "min_price": 100000,
-        "max_price": 2000000,
+        "city": "Mumbai",  # Indian city
+        "locality": "Andheri",  # Mumbai locality (optional)
+        "min_price": 1000000,  # ₹10 Lakh
+        "max_price": 50000000,  # ₹5 Crore
         "limit": 50,  # Max results to scrape
     },
 
-    # CSS Selectors
+    # CSS Selectors for MagicBricks.com
     "selectors": {
-        "listing_card": "div[class*='component_property-card'], li[class*='component_property-card']",
-        "address": "[data-testid='property-address'], .card-address, div[class*='address']",
-        "price": "[data-testid='property-price'], .card-price, div[class*='price']",
-        "bedrooms": "[data-testid='property-bed'], .bed, span[class*='bed']",
-        "bathrooms": "[data-testid='property-bath'], .bath, span[class*='bath']",
-        "sqft": "[data-testid='property-sqft'], .sqft, span[class*='sqft']",
-        "listing_date": ".listing-date, time, [class*='date']",
-        "agent_contact": ".agent-info, [class*='agent']",
-        "next_button": "a[aria-label='Next'], button.next-page, a[rel='next']",
+        # Main listing card container
+        "listing_card": "div.mb-srp__card, div[class*='mb-srp__card'], section.mb-srp__card, div.clearfix.mb-srp__card--link",
+
+        # Property address/location
+        "address": "div.mb-srp__card--title, h2.mb-srp__card--title, div[class*='mb-srp__card--addr'], span.mb-srp__card__ads--title, div.mb-srp__card__summary--value",
+
+        # Price (in Lakhs/Crores)
+        "price": "div.mb-srp__card__price--amount, span.mb-srp__card__price, div[class*='mb-srp__card__price'], span.mb-srp__card__price--amount strong",
+
+        # BHK configuration
+        "bedrooms": "div.mb-srp__card__summary--value.mb-srp__card--flat-config, span[class*='bedroom'], div.mb-srp__card__summary--value, td.mb-srp__card__summary--value",
+
+        # Square footage
+        "sqft": "div.mb-srp__card__summary--value, span[class*='area'], div[title*='Carpet'], div[title*='Built']",
+
+        # Listing date
+        "listing_date": "div.mb-srp__card__posted--date, span.mb-srp__card__ads--posted, time, div[class*='posted']",
+
+        # Agent/builder info
+        "agent_contact": "div.mb-srp__card__ads--phone, span.mb-srp__card__builder, div[class*='builder-name']",
+
+        # Next page button
+        "next_button": "a.mb-srp__pagination--next, a[rel='next'], div.mb-srp__pagination a.active + a, button[aria-label='Next']",
+
+        # Alternative selectors (fallback)
+        "alt_listing_card": "div.m-srp-card, div[class*='m-srp-card'], article[class*='property-card']",
+        "alt_price": "span.mb-srp__card__price--amount, div[data-price], span[class*='price']",
+    },
+
+    # Pagination
+    "pagination": {
+        "type": "button_click",  # MagicBricks uses page buttons
+        "max_pages": 3,  # Limit for demo
+        "url_param_name": "page",
+    },
+
+    # Wait conditions
+    "wait_for": {
+        "selector": "div.mb-srp__card, div[class*='mb-srp__card']",
+        "timeout": 20000,
+    },
+
+    # Data extraction patterns (Indian Rupees)
+    "patterns": {
+        # Indian price formats: ₹1.2 Cr, ₹45 Lac
+        "price_regex": r"₹\s?([\d,\.]+)\s*(?:Cr|Crore|Lac|Lakh|L|K)?",
+        "bed_regex": r"(\d+)\s*(?:BHK|bed|bd|bedroom)",
+        "bath_regex": r"(\d+\.?\d*)\s*(?:bath|ba|bathroom)",
+        "sqft_regex": r"([\d,]+)\s*(?:sq\.?\s*ft|sqft|Sq-ft|Sq\.Ft\.)",
+    },
+}
+
+# ===========================
+# ADDITIONAL SITE CONFIGS (INDIA)
+# ===========================
+
+# HOUSING.COM - FALLBACK OPTION (INDIA)
+# Works great from India, another major portal
+HOUSING_CONFIG = {
+    "name": "housing_scraper",
+    "url": "https://housing.com/in/buy/real-estate-mumbai",
+    "description": "Scrapes Housing.com listing data (fallback option)",
+
+    # Search parameters
+    "search_params": {
+        "city": "Mumbai",
+        "min_price": 1000000,  # ₹10 Lakh
+        "max_price": 50000000,  # ₹5 Crore
+        "limit": 50,
+    },
+
+    # CSS Selectors for Housing.com
+    "selectors": {
+        "listing_card": "div[data-testid='builder-card'], div.card, div[class*='snb-card']",
+        "address": "div[data-testid='builder-card-name'], h2.heading-6, div.locality",
+        "price": "div[data-testid='builder-card-price'], span.price, div[class*='price']",
+        "bedrooms": "div[data-testid='bhk'], span[class*='bhk'], div.config",
+        "sqft": "div[data-testid='carpet-area'], span[class*='area'], div.super-area",
+        "listing_date": "div.posted-on, time, span[class*='date']",
+        "agent_contact": "div.builder-name, span.agent-name",
+        "next_button": "button[aria-label='Next'], a.next-page, div.pagination button:last-child",
 
         # Alternative selectors
-        "alt_listing_card": "article[class*='property'], div[data-testid*='card']",
-        "alt_price": "span[data-label='price'], div[class*='list-price']",
+        "alt_listing_card": "article[class*='property'], div[class*='listing-card']",
+        "alt_price": "span[data-price], div[class*='price-value']",
     },
 
     # Pagination
     "pagination": {
         "type": "button_click",
-        "max_pages": 3,  # Limit for demo
-        "url_param_name": "pg",
+        "max_pages": 3,
+        "url_param_name": "page",
     },
 
     # Wait conditions
     "wait_for": {
-        "selector": "div[class*='component_property-card'], li[class*='property']",
+        "selector": "div[data-testid='builder-card'], div.card",
         "timeout": 20000,
     },
 
     # Data extraction patterns
     "patterns": {
-        "price_regex": r"\$?([\d,]+\.?\d*)",
-        "bed_regex": r"(\d+)\s*(?:bed|bd|bedroom)",
+        "price_regex": r"₹\s?([\d,\.]+)\s*(?:Cr|Crore|Lac|Lakh|L|K)?",
+        "bed_regex": r"(\d+)\s*(?:BHK|bed|bd|bedroom)",
         "bath_regex": r"(\d+\.?\d*)\s*(?:bath|ba|bathroom)",
-        "sqft_regex": r"([\d,]+)\s*(?:sq\.?\s*ft|sqft|square feet)",
+        "sqft_regex": r"([\d,]+)\s*(?:sq\.?\s*ft|sqft|Sq-ft|Sq\.Ft\.)",
     },
-}
-
-# ===========================
-# ADDITIONAL SITE CONFIGS
-# ===========================
-
-# You can add more site configurations here following the same pattern
-# Example: Zillow, Redfin, Trulia, etc.
-
-ZILLOW_CONFIG = {
-    "name": "zillow_scraper",
-    "url": "https://www.zillow.com/homes/",
-    "description": "Scrapes Zillow listing data",
-    # ... add selectors when needed
 }
 
 # Mapping of scraper names to configs
 SCRAPER_CONFIGS = {
-    "auction": AUCTION_CONFIG,
-    "listing": LISTING_CONFIG,
-    "zillow": ZILLOW_CONFIG,
+    "auction": AUCTION_CONFIG,      # 99acres.com
+    "listing": LISTING_CONFIG,      # MagicBricks.com
+    "housing": HOUSING_CONFIG,      # Housing.com (fallback)
 }

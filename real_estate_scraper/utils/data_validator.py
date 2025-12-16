@@ -29,9 +29,10 @@ class DataValidator:
     def clean_price(price_str: Optional[str]) -> Optional[float]:
         """
         Clean and convert price string to float.
+        Supports both USD ($) and Indian Rupees (₹) formats.
 
         Args:
-            price_str: Raw price string (e.g., "$450,000", "1.2M")
+            price_str: Raw price string (e.g., "$450,000", "1.2M", "₹1.2 Cr", "₹45 Lac")
 
         Returns:
             Price as float or None if invalid
@@ -41,6 +42,12 @@ class DataValidator:
             450000.0
             >>> DataValidator.clean_price("1.2M")
             1200000.0
+            >>> DataValidator.clean_price("₹1.2 Cr")
+            12000000.0
+            >>> DataValidator.clean_price("₹45 Lac")
+            4500000.0
+            >>> DataValidator.clean_price("₹1.5 L")
+            150000.0
             >>> DataValidator.clean_price("invalid")
             None
         """
@@ -51,19 +58,40 @@ class DataValidator:
             # Remove whitespace
             cleaned = str(price_str).strip()
 
-            # Handle "K" and "M" suffixes
+            # Handle Indian Rupee formats (Crores and Lakhs)
+            # 1 Crore = 10,000,000 (1,00,00,000)
+            # 1 Lakh = 100,000 (1,00,000)
             multiplier = 1
-            if cleaned.upper().endswith('K'):
+
+            # Check for Crore/Cr
+            if re.search(r'(?:Cr|Crore)', cleaned, re.IGNORECASE):
+                multiplier = 10000000  # 1 Crore
+                cleaned = re.sub(r'(?:Cr|Crore)', '', cleaned, flags=re.IGNORECASE)
+
+            # Check for Lakh/Lac/L (but not "L" if followed by other letters)
+            elif re.search(r'(?:Lakh|Lac)\b', cleaned, re.IGNORECASE):
+                multiplier = 100000  # 1 Lakh
+                cleaned = re.sub(r'(?:Lakh|Lac)', '', cleaned, flags=re.IGNORECASE)
+
+            # Check for standalone L (Lakh abbreviation)
+            elif re.search(r'\bL\b', cleaned):
+                multiplier = 100000  # 1 Lakh
+                cleaned = re.sub(r'\bL\b', '', cleaned)
+
+            # Check for K (thousand) - both USD and INR
+            elif re.search(r'\bK\b', cleaned, re.IGNORECASE):
                 multiplier = 1000
-                cleaned = cleaned[:-1]
-            elif cleaned.upper().endswith('M'):
+                cleaned = re.sub(r'\bK\b', '', cleaned, flags=re.IGNORECASE)
+
+            # Check for M (million) - USD format
+            elif re.search(r'\bM\b', cleaned, re.IGNORECASE):
                 multiplier = 1000000
-                cleaned = cleaned[:-1]
+                cleaned = re.sub(r'\bM\b', '', cleaned, flags=re.IGNORECASE)
 
-            # Remove $ and commas
-            cleaned = cleaned.replace('$', '').replace(',', '').strip()
+            # Remove currency symbols (₹ and $) and commas
+            cleaned = cleaned.replace('₹', '').replace('$', '').replace(',', '').strip()
 
-            # Extract numeric value
+            # Extract numeric value (handles decimals)
             match = re.search(r'([\d.]+)', cleaned)
             if match:
                 value = float(match.group(1)) * multiplier
