@@ -44,18 +44,86 @@ class ListingScraper(BaseScraper):
 
     async def extract_data(self) -> List[Dict[str, Any]]:
         """
-        Extract listing data from target site.
+        Extract listing data from target site with fallback support.
 
         Returns:
             List of listing property records
 
         Process:
-        1. Build search URL with parameters
-        2. Navigate to listings page
-        3. Extract listing cards
-        4. Paginate through results
-        5. Clean and validate data
-        6. Calculate market statistics
+        1. Try PRIMARY URL with full retry logic
+        2. If PRIMARY fails, try FALLBACK 1 with full retry logic
+        3. If FALLBACK 1 fails, try FALLBACK 2 with full retry logic
+        4. Extract listing data from whichever URL succeeds
+        5. Calculate market statistics
+        """
+        all_listings = []
+
+        # Get fallback URLs from config
+        primary_url = self.config['url']
+        fallback_urls = self.config.get('fallback_urls', [])
+
+        # Try primary URL first, then fallbacks
+        urls_to_try = [primary_url] + fallback_urls
+        url_names = ["PRIMARY (MagicBricks Ahmedabad)", "FALLBACK 1 (Housing.com Mumbai)", "FALLBACK 2 (99acres Mumbai)"]
+
+        successful_url = None
+
+        for idx, url in enumerate(urls_to_try):
+            url_name = url_names[idx] if idx < len(url_names) else f"FALLBACK {idx}"
+
+            try:
+                logger.info("=" * 80)
+                logger.info(f"ATTEMPTING {url_name}")
+                logger.info(f"URL: {url}")
+                logger.info("=" * 80)
+
+                # Try to scrape from this URL
+                listings = await self._extract_from_url(url)
+
+                if listings and len(listings) > 0:
+                    logger.info(f"✓ SUCCESS with {url_name}: {len(listings)} listings extracted")
+                    all_listings = listings
+                    successful_url = url
+                    break
+                else:
+                    logger.warning(f"✗ {url_name} returned 0 listings, trying next fallback...")
+
+            except Exception as e:
+                logger.error(f"✗ {url_name} FAILED after all retries: {e}")
+
+                if idx < len(urls_to_try) - 1:
+                    next_name = url_names[idx + 1] if idx + 1 < len(url_names) else f"FALLBACK {idx + 1}"
+                    logger.warning(f"→ Moving to {next_name}...")
+                else:
+                    logger.error("✗ ALL URLs EXHAUSTED - No more fallbacks available")
+
+        # Check if we got any data
+        if not all_listings:
+            error_msg = "Failed to extract data from all URLs (primary + all fallbacks)"
+            logger.error(error_msg)
+            self.errors.append(error_msg)
+            return []
+
+        logger.info("=" * 80)
+        logger.info(f"FINAL RESULT: {len(all_listings)} listings from {successful_url}")
+        logger.info("=" * 80)
+
+        return all_listings
+
+    async def _extract_from_url(self, url: str) -> List[Dict[str, Any]]:
+        """
+        Extract listings from a specific URL.
+
+        This method tries to scrape from the given URL with full retry logic.
+
+        Args:
+            url: URL to scrape
+
+        Returns:
+            List of listing records
+
+        Raises:
+            Exception: If scraping fails after all retries
         """
         all_listings = []
         current_page = 1
@@ -63,12 +131,12 @@ class ListingScraper(BaseScraper):
         max_results = self.search_params.get('limit', 50)
 
         logger.info(
-            f"Starting listing extraction from {self.config['url']} "
+            f"Starting listing extraction from {url} "
             f"(params: {self.search_params})"
         )
 
-        # Build initial search URL
-        search_url = self._build_search_url()
+        # Use the provided URL directly (already has query params)
+        search_url = url
 
         while current_page <= max_pages and len(all_listings) < max_results:
             try:

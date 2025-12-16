@@ -1,30 +1,32 @@
 # Indian Real Estate Sites - Quick Reference
 
-## Configured Sites (Ready to Use from India)
+## 🚀 NEW: Multi-Site Fallback System
 
-### 1. 99acres.com (PRIMARY) ✅
-**Command:** `python main.py --site auction`
-- **URL:** https://www.99acres.com/property-for-sale-flats-apartments-in-mumbai
-- **Target City:** Mumbai
-- **Type:** India's largest real estate portal
-- **Features:** Residential properties, BHK format (1BHK, 2BHK, 3BHK)
-- **Pagination:** Infinite scroll
-- **Price Format:** ₹1.2 Cr, ₹45 Lac, etc.
+The scraper now **automatically tries multiple sites** if the primary fails!
 
-**What it scrapes:**
-- Project name and location (address)
-- Price (in Crores/Lakhs)
-- BHK configuration (bedrooms)
-- Square footage (sq.ft)
-- Posted date
-- Brochure/PDF links (if available)
+**Command:** `python main.py --site listing`
+
+### Fallback Order (Automatic):
+1. **PRIMARY:** MagicBricks Ahmedabad (2-3 BHK) - Tries first with full retry logic
+2. **FALLBACK 1:** Housing.com Mumbai - Tries if PRIMARY fails
+3. **FALLBACK 2:** 99acres Mumbai - Tries if FALLBACK 1 fails
+
+**How it works:**
+- Each URL gets **full retry logic** (3 attempts with 5s, 10s, 20s delays)
+- If PRIMARY fails after all retries → automatically tries FALLBACK 1
+- If FALLBACK 1 fails → automatically tries FALLBACK 2
+- Logs show exactly which site succeeded
+- **No manual intervention needed!**
 
 ---
 
-### 2. MagicBricks.com (SECONDARY) ✅
+## Configured Sites
+
+### 1. MagicBricks.com Ahmedabad (PRIMARY) ✅
 **Command:** `python main.py --site listing`
-- **URL:** https://www.magicbricks.com/property-for-sale/residential-real-estate?cityName=Mumbai
-- **Target City:** Mumbai
+- **URL:** https://www.magicbricks.com/property-for-sale/residential-real-estate?bedroom=2,3&cityName=Ahmedabad
+- **Target City:** Ahmedabad
+- **Filter:** 2-3 BHK properties
 - **Type:** India's 2nd largest real estate portal
 - **Features:** Residential properties, builder info, agent contacts
 - **Pagination:** Page buttons
@@ -33,35 +35,83 @@
 **What it scrapes:**
 - Property title and location
 - Price (in Crores/Lakhs)
-- BHK configuration
+- BHK configuration (2-3 BHK)
 - Carpet/Built-up area
 - Listing date
 - Builder/Agent contact
 
 ---
 
-### 3. Housing.com (FALLBACK) ✅
-**Command:** Edit `main.py` to use `HOUSING_CONFIG`
-- **URL:** https://housing.com/in/buy/real-estate-mumbai
+### 2. Housing.com Mumbai (FALLBACK 1) ✅
+**Automatic if PRIMARY fails**
+- **URL:** https://housing.com/in/buy/mumbai/mumbai
 - **Target City:** Mumbai
-- **Type:** Alternative if others fail
+- **Type:** Alternative if MagicBricks fails
 - **Features:** Modern UI, data-testid selectors
 - **Pagination:** Page buttons
+- **Price Format:** ₹1.2 Cr, ₹45 Lac
+
+---
+
+### 3. 99acres.com Mumbai (FALLBACK 2) ✅
+**Automatic if FALLBACK 1 fails**
+- **URL:** https://www.99acres.com/search/property/buy/mumbai
+- **Target City:** Mumbai
+- **Type:** India's largest real estate portal (last resort)
+- **Features:** Residential properties, BHK format
+- **Pagination:** Infinite scroll
+- **Price Format:** ₹1.2 Cr, ₹45 Lac
+
+---
+
+### 4. 99acres.com Mumbai (AUCTION SCRAPER) ✅
+**Command:** `python main.py --site auction`
+- **URL:** https://www.99acres.com/property-for-sale-flats-apartments-in-mumbai
+- **Target City:** Mumbai
+- **Type:** Separate scraper for auction/foreclosure properties
+- **Features:** Residential properties, BHK format
+- **Pagination:** Infinite scroll
+- **Price Format:** ₹1.2 Cr, ₹45 Lac
 
 ---
 
 ## How to Run
 
-### Quick Start
+### Quick Start (With Automatic Fallback)
 ```bash
-# 99acres (recommended)
-python main.py --site auction
-
-# MagicBricks (alternative)
+# RECOMMENDED: Multi-site fallback scraper
+# Tries MagicBricks → Housing.com → 99acres automatically
 python main.py --site listing
 
-# Both sites
+# Alternative: 99acres only (no fallback)
+python main.py --site auction
+
+# Both scrapers
 python main.py --site both
+```
+
+### Expected Behavior
+When you run `python main.py --site listing`, you'll see:
+```
+================================================================================
+ATTEMPTING PRIMARY (MagicBricks Ahmedabad)
+URL: https://www.magicbricks.com/property-for-sale/residential-real-estate...
+================================================================================
+INFO | Fetching: https://www.magicbricks.com...
+[Retry attempts with 5s, 10s, 20s delays if needed]
+✓ SUCCESS with PRIMARY (MagicBricks Ahmedabad): 25 listings extracted
+================================================================================
+FINAL RESULT: 25 listings from https://www.magicbricks.com...
+================================================================================
+```
+
+**If PRIMARY fails:**
+```
+✗ PRIMARY (MagicBricks Ahmedabad) FAILED after all retries
+→ Moving to FALLBACK 1 (Housing.com Mumbai)...
+================================================================================
+ATTEMPTING FALLBACK 1 (Housing.com Mumbai)
+...
 ```
 
 ### Before Running
